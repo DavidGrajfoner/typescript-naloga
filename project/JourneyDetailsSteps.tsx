@@ -152,50 +152,93 @@ function JourneyDetailsSteps() {
         getSteps();
     }, [getSteps]);
 
+    // Z združitvijo vseh klicev v eno enotno funkcijo fetchData zagotavljamo, da so vsi potrebni podatki pridobljeni v enem ciklu
     useEffect(() => {
-        api.adminSchemaMapping?.getAllSchemaMappings().then((response: SchemaMapping[]) => {
-            setSchemaMappings(
-                response.map(
-                    (mapping) =>
-                        ({
+        const fetchData = async () => {
+            try {
+                const [
+                    schemaMappingsResponse,
+                    documentCollectionTypesResponse,
+                    journeysResponse,
+                    stepTypesResponse,
+                    schemasResponse,
+                    userActionTypesResponse,
+                ] = await Promise.all([
+                    api.adminSchemaMapping?.getAllSchemaMappings() as Promise<SchemaMapping[]>,
+                    api.documentCollectionApi?.getDocumentCollectionTypes() as Promise<DocumentCollectionType[]>,
+                    api.adminJourney?.getJurneys() as Promise<Journey[]>,
+                    api.register?.getStepTypes(),
+                    api.adminSchema?.getSchemas() as Promise<Schema[]>,
+                    api.register?.getUserActionTypes() as Promise<UserActionType[]>,
+                ]);
+    
+                setSchemaMappings(
+                    schemaMappingsResponse.map(
+                        (mapping) => ({
                             value: mapping.id!,
                             label: mapping.description!,
                             testAtId: atId("djpa_jd_02_lbl_schema_mapping" + mapping.id),
-                        } as RichOption),
-                ),
-            );
-        });
-    }, [api]);
-
-    useEffect(() => {
-        api.documentCollectionApi?.getDocumentCollectionTypes().then((response: DocumentCollectionType[]) => {
-            setDocumentCollectionList(
-                response.map(
-                    (mapping) =>
-                        ({
+                        }) as RichOption
+                    )
+                );
+    
+                setDocumentCollectionList(
+                    documentCollectionTypesResponse.map(
+                        (mapping) => ({
                             value: mapping.id!,
                             label: mapping.name!,
                             testAtId: atId("djpa_jd_02_lbl_API_document_collection_" + mapping.id),
-                        } as RichOption),
-                ),
-            );
-        });
-    }, [api]);
-
-    useEffect(() => {
-        api.adminJourney?.getJurneys().then((response: Journey[]) => {
-            setJourneys(
-                response.map(
-                    (_journey) =>
-                        ({
+                        }) as RichOption
+                    )
+                );
+    
+                setJourneys(
+                    journeysResponse.map(
+                        (_journey) => ({
                             value: _journey.id,
                             label: _journey.journeyName,
                             testAtId: atId("djpa_jd_02_lbl_sub_journey_" + _journey.id),
-                        } as RichOption),
-                ),
-            );
-        });
+                        }) as RichOption
+                    )
+                );
+    
+                setStepTypes(
+                    stepTypesResponse.map(
+                        (type) => ({
+                            value: type.id!,
+                            label: type.typeName!,
+                            testAtId: atId("djpa_jd_02_lbl_step_type_" + type.id),
+                        }) as RichOption
+                    )
+                );
+    
+                setSchemas(
+                    schemasResponse.map(
+                        (schema) => ({
+                            value: schema.id,
+                            label: schema.objectName,
+                            testAtId: atId("djpa_jd_02_lbl_user_action_schema_" + schema.id),
+                        }) as RichOption
+                    )
+                );
+    
+                setUserActionTypes(
+                    userActionTypesResponse.map(
+                        (action) => ({
+                            value: action.id!,
+                            label: action.actionTypeDesc!,
+                            testAtId: atId("djpa_jd_02_sv_useractiontype_" + action.id),
+                        }) as RichOption
+                    )
+                );
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        };
+    
+        fetchData();
     }, [api]);
+
 
     useEffect(() => {
         if (!id && steps && steps.length > 0) {
@@ -213,58 +256,6 @@ function JourneyDetailsSteps() {
         }
     }, [id, steps]);
 
-    useEffect(() => {
-        api.register?.getStepTypes().then((types) => {
-            if (types && types.length > 0) {
-                setStepTypes(
-                    types.map(
-                        (type) =>
-                            ({
-                                value: type.id!,
-                                label: type.typeName!,
-                                testAtId: atId("djpa_jd_02_lbl_step_type_" + type.id),
-                            } as RichOption),
-                    ),
-                );
-            } else {
-                setStepTypes([]);
-            }
-        });
-    }, [api]);
-
-    useEffect(() => {
-        api.adminSchema?.getSchemas().then((schemas: Schema[]) => {
-            if (schemas && schemas.length > 0) {
-                setSchemas(
-                    schemas.map(
-                        (schema) =>
-                            ({
-                                value: schema.id,
-                                label: schema.objectName,
-                                testAtId: atId("djpa_jd_02_lbl_user_action_schema_" + schema.id),
-                            } as RichOption),
-                    ),
-                );
-            }
-        });
-    }, [api]);
-
-    useEffect(() => {
-        api.register?.getUserActionTypes().then((userActionTypes: UserActionType[]) => {
-            if (userActionTypes && userActionTypes.length > 0) {
-                setUserActionTypes(
-                    userActionTypes.map(
-                        (action) =>
-                            ({
-                                value: action.id!,
-                                label: action.actionTypeDesc!,
-                                testAtId: atId("djpa_jd_02_sv_useractiontype_" + action.id),
-                            } as RichOption),
-                    ),
-                );
-            }
-        });
-    }, [api]);
 
     const onTabClickSwitcher = useCallback(
         (tab: number | string) => {
@@ -435,27 +426,12 @@ function JourneyDetailsSteps() {
             } as Partial<JourneyStep>;
         },
 
-        handleSubmit: async (values: Partial<JourneyStep>) => {
-            if (!values.employeeFacingStep) {
-                values.employeeMessage = undefined;
-            }
-            // Todo submit values
-            if (values.initialStep!)
-                if (steps.filter((e) => e.initialStep).length === 0) {
-                    onSubmit(values);
-                } else {
-                    {
-                        toast.error(literals("djpa_jd_02_err_initial_step", { stepName: `"${journeyInitialStep()}"` }));
-                        values.initialStep = false;
-                    }
-                }
-            else {
-                {
-                    onSubmit(values);
-                }
-            }
+        handleSubmit: async (values) => {
+            await handleSubmitStepForm(values);
         },
+
         validationSchema: stepValidation,
+
         mapPropsToStatus: () => {
             return {
                 filter: "",
@@ -494,28 +470,29 @@ function JourneyDetailsSteps() {
 
         validationSchema: stepValidation,
 
-        handleSubmit: async (values: Partial<JourneyStep>, { setSubmitting }, ...props) => {
-            if (!values.employeeFacingStep) {
-                values.employeeMessage = undefined;
-            }
-            // Todo submit values
-            if (values.initialStep!)
-                if (steps.filter((e) => e.initialStep).length === 0) {
-                    onSubmit(values);
-                } else {
-                    {
-                        toast.error(literals("djpa_jd_02_err_initial_step", { stepName: `"${journeyInitialStep()}"` }));
-                        values.initialStep = false;
-                    }
-                }
-            else {
-                {
-                    onSubmit(values);
-                }
-            }
+        handleSubmit: async (values, { setSubmitting }) => {
+            await handleSubmitStepForm(values);
         },
+
         displayName: "AdminEditJourneyStepForm",
     })(StepForm);
+
+    //Ločena metoda handleSubmitStepForm, da ni podvojena v NewStepForm in EditStepForm
+    const handleSubmitStepForm = async (values: Partial<JourneyStep>) => {
+        if (!values.employeeFacingStep) {
+            values.employeeMessage = undefined;
+        }
+        if (values.initialStep) {
+            if (steps.filter((e) => e.initialStep).length === 0) {
+                onSubmit(values);
+            } else {
+                toast.error(literals("djpa_jd_02_err_initial_step", { stepName: `"${journeyInitialStep()}"` }));
+                values.initialStep = false;
+            }
+        } else {
+            onSubmit(values);
+        }
+    };
 
     const deleteModalHandler = (id: number | boolean) => {
         if (id === 2) {

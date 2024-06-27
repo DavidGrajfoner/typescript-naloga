@@ -6,7 +6,8 @@ import {HalUIProps, InputLabelProp,  TestAtIdProp} from "../base.interface";
 import { BaseFieldError } from "../inputs/BaseInput";
 import "./BaseCheckbox.scss";
 
-let componentClass = "halui-checkbox";
+// Globalna konstanta componentClass
+const componentClass = "halui-checkbox-v2";
 
 
 export interface BaseFormElement {
@@ -24,7 +25,8 @@ export interface BaseCheckboxV2Props
     labelTestAtId?: TestAtIdProp;
 }
 
-const BaseCheckbox = ({
+// BaseCheckbox je eksplicitno tipiziran kot funkcionalna komponenta React
+const BaseCheckbox: React.FC<BaseCheckboxV2Props & HalUIProps> = ({
     name,
     strong = false,
     disabled = false,
@@ -41,25 +43,32 @@ const BaseCheckbox = ({
     error,
     value,
     ...props
-}: BaseCheckboxV2Props & HalUIProps) => {
-    componentClass = `halui-checkbox-v2`;
+}) => {
 
+    // Element label ima zdaj atribut htmlFor, povezan z id atributom elementa input.
     return (
-        <div className={`${componentClass}`}>
-            <label {...labelTestAtId}>
+        <div className={componentClass}>
+            <label htmlFor={name} {...labelTestAtId}>
                 <input
-                    style={{ margin: "0 5px 0 0" }}
+                    id={name}
                     type="checkbox"
                     onChange={onChange}
                     name={name}
-                    className={`halui-checkbox-v2__input ${className} halui-checkbox-v2__input--${color} 
-                    halui-checkbox-v2__input--${customSize} ${checked ? "checked" : ""}`}
+                    className={clsx(
+                      `${componentClass}__input`,
+                      className,
+                      `${componentClass}__input--${color}`,
+                      `${componentClass}__input--${customSize}`,
+                      `${componentClass}__input--margin`,
+                      { checked }
+                    )}
                     {...testAtId}
                     {...props}
                 />
-                <span className={clsx("halui-input__label halui-checkbox-v2__label")}>{label}</span>
+                <span className={clsx("halui-input__label", `${componentClass}__label`)}>{label}</span>
             </label>
-            <BaseFieldError error={error} />
+            {/* Pogojno renderiramo BaseFieldError */}
+            {error && <BaseFieldError error={error} />}
         </div>
     );
 };
@@ -68,39 +77,47 @@ const WithFieldValue: React.FC<BaseCheckboxV2Props & HalUIProps> = ({
     name,
     value,
     color = "invert-primary",
+    checked,
+    customSize,
+    className,
+    onChange,
+    testAtId,
+    label,
     ...props
 }) => {
-    const [isChecked, setIsChecked] = useState<boolean | undefined>(false);
+    const [isChecked, setIsChecked] = useState<boolean>(false);
 
+    // Pretvorba vrednosti v boolean je poenostavljena
     useEffect(() => {
-        if (typeof value === "string") {
-            return value === "true" ? setIsChecked(true) : setIsChecked(false);
-        }
-        if (typeof value === "boolean") {
-            setIsChecked(value);
-        }
+        setIsChecked(value === "true" || value === true);
     }, [value]);
+
     return (
-        <>
             <Field type="checkbox" name={name} value={value}>
                 {({ field, form }: FieldProps<FormikValues>) => (
-                    <div className={`${componentClass}`}>
+                    <div className={componentClass}>
                         <input
                             type="checkbox"
-                            checked={isChecked ?? false}
-                            className={`halui-checkbox-v2__input ${props.className} halui-checkbox-v2__input--${color} 
-                    halui-checkbox-v2__input--${props.customSize} ${isChecked ? "checked" : ""}`}
-                            {...props.testAtId}
+                            checked={isChecked}
+                            className={clsx(
+                                `${componentClass}__input`,
+                                className,
+                                `${componentClass}__input--${color}`,
+                                `${componentClass}__input--${customSize}`,
+                                { checked }
+                            )}
+                            {...testAtId}
                             {...props}
+                            // onChange upošteva obstoječe handlerje onChange
                             onChange={(e) => {
                                 form.setFieldValue(field.name, e.target.checked);
+                                if (onChange) onChange(e);
                             }}
                         />
-                        <span className={clsx("halui-input__label halui-checkbox-v2__label")}>{props.label}</span>
+                        <span className={clsx("halui-input__label", `${componentClass}__label`)}>{label}</span>
                     </div>
                 )}
             </Field>
-        </>
     );
 };
 

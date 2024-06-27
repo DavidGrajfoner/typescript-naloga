@@ -8,29 +8,8 @@ import { BaseIcon } from "../icons/BaseIcon";
 import { BaseMenuBarProps, BaseMenuItemProps, MenuWithIcon } from "./BaseMenuBar.interface";
 import "./BaseMenuBar.scss";
 
-let componentClass = "halui-menu";
-
-const Item: React.FC<PropsWithChildren<BaseMenuItemProps>> = ({
-    children,
-    onClick,
-    testAtId,
-    className,
-    brand,
-    testAtIdForMenu,
-    rowTestAtId,
-    el,
-}: PropsWithChildren<BaseMenuItemProps>) => {
-    let rootClass = useBrandingClass(componentClass, brand, className);
-    return (
-        <div
-            className={clsx(`${rootClass}__item`)}
-            onClick={onClick}
-            {...foldTestIds([testAtId, rowTestAtId && rowTestAtId(el)])}
-        >
-            {children}
-        </div>
-    );
-};
+// Globalna konstanta componentClass
+const componentClass = "halui-menu";
 
 function BaseMenuBar({
     brand,
@@ -50,23 +29,27 @@ function BaseMenuBar({
     rowTestAtId,
     testIdForLeftMenu,
 }: PropsWithChildren<HalUIProps & BaseMenuBarProps>) {
-    let rootClass = useBrandingClass(componentClass, brand, className);
+
+    const rootClass = useBrandingClass(componentClass, brand, className);
+
     const clickHandler = (el: MenuWithIcon) => {
         return onClick ? onClick(el.id) : null;
     };
+
     const containerModifiers = {
         [`${rootClass}--vertical`]: vertical,
     };
+
     const modifiers = {
         [`${rootClass}__item--rounded`]: rounded,
         [`${rootClass}__item--border`]: border,
     };
+
     return (
         <div className={clsx(rootClass, `${rootClass}--${size}`, containerModifiers)} {...testAtId}>
-            {menuItems &&
-                menuItems.map((el, index) => {
+            {menuItems && menuItems.map((el) => {
                     return (
-                        <React.Fragment key={index}>
+                        <React.Fragment key={el.id}> {/* Pri zagotavljanju edinstvenosti ključa v funkciji .map() sem uporabil el.id */}
                             <Item
                                 className={clsx(
                                     !theme && `${rootClass}__item--${color}`,
@@ -77,24 +60,24 @@ function BaseMenuBar({
                                     rootClass,
                                 )}
                                 // testAtIdForMenu={el.testAtId}
-                                testAtId={testIdForLeftMenu === true ? testAtId : el.testAtId}
+                                testAtId={testIdForLeftMenu ? testAtId : el.testAtId}
                                 rowTestAtId={rowTestAtId}
                                 onClick={() => clickHandler(el)}
                                 el={el}
                             >
-                                {el.withIcon
-                                    ? [
-                                          <span className={`${rootClass}__item--icon`} key={index}>
-                                              <BaseIcon
-                                                  name={el.icon?.name as IconName}
-                                                  width={width}
-                                                  height={height}
-                                              />
-                                          </span>,
-                                          <span key={el.id}>{el.title}</span>,
-                                      ]
-                                    : el.title}
-                                <div>{el.title2}</div>
+                                {el.withIcon ? (
+                                    <>
+                                        <span className={`${rootClass}__item--icon`}> {/* Odstranjen key */}
+                                            <BaseIcon
+                                                name={el.icon?.name as IconName}
+                                                width={width}
+                                                height={height}
+                                            />
+                                        </span>
+                                        <span>{el.title}</span> {/* Odstranjen key */}
+                                    </>
+                                ) : ( el.title)}
+                                {el.title2 && <div>{el.title2}</div>}  {/* Pogojno renderiramo title2 */}
                             </Item>
                             <div className={`${rootClass}__borders`} />
                         </React.Fragment>
@@ -103,5 +86,28 @@ function BaseMenuBar({
         </div>
     );
 }
+
+const Item: React.FC<PropsWithChildren<BaseMenuItemProps>> = ({
+    children,
+    onClick,
+    testAtId,
+    className,
+    brand,
+    rowTestAtId,
+    el,
+}) => {
+
+    const rootClass = useBrandingClass(componentClass, brand, className);
+
+    return (
+        <div
+            className={clsx(`${rootClass}__item`, className)}
+            onClick={onClick}
+            {...foldTestIds([testAtId, rowTestAtId && rowTestAtId(el)])}
+        >
+            {children}
+        </div>
+    );
+};
 
 export { BaseMenuBar };
