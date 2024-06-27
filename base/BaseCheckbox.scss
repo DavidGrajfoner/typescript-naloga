@@ -117,4 +117,9 @@ $def-chb-width: 24px !default;
         font-size: $def-chb-height * 0.9;
         border-radius: 3px;
     }
+
+    // Dodan input--margin, da v kodi ne uporabljamo style
+    &__input--margin {
+        margin-right: 5px;
+    }
 }
